@@ -3,15 +3,12 @@
 // Lafayette Market y Rudewear (lafayette-market-d64ff). Las colecciones
 // van prefijadas `toolhome_*` para no chocar con las de los otros subs.
 //
-// El init es tolerante a env vars ausentes durante prerender (SSG) —
-// devolvemos stubs para que `import { db } from ...` no crashee build.
-// En runtime con NEXT_PUBLIC_* seteados, funciona normal.
+// Init directo (no Proxy) — Firestore SDK hace instanceof checks
+// internos sobre el argument de collection() y otros; un Proxy los
+// rompe. Guard con apiKey check para que el build no crashee si algún
+// prerender corre sin env vars inyectados.
 
-import {
-  initializeApp,
-  getApps,
-  type FirebaseApp,
-} from 'firebase/app';
+import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
@@ -25,56 +22,19 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-let app: FirebaseApp | null = null;
+// Init sólo si tenemos apiKey — evita crash en prerender sin env.
+// En prod (App Hosting inyecta secrets en build), esto siempre corre.
+const app: FirebaseApp | null = firebaseConfig.apiKey
+  ? (getApps()[0] ?? initializeApp(firebaseConfig))
+  : null;
 
-function safeInit(): FirebaseApp | null {
-  // Sin apiKey (build time sin env local) → skip. Client con env → init.
-  if (!firebaseConfig.apiKey) return null;
-  if (getApps().length > 0) return getApps()[0];
-  try {
-    return initializeApp(firebaseConfig);
-  } catch (err) {
-    console.error('[firebase] init failed:', err);
-    return null;
-  }
-}
-
-app = safeInit();
-
-// Los servicios se acceden vía getters lazy. Si app no está listo
-// (prerender), throw un error legible en lugar del cryptic
-// 'auth/invalid-api-key' que muestra Firebase.
-function requireApp(): FirebaseApp {
-  if (!app) app = safeInit();
-  if (!app) {
-    throw new Error(
-      'Firebase not initialized — NEXT_PUBLIC_FIREBASE_* env vars missing.'
-    );
-  }
-  return app;
-}
-
-let _auth: Auth | null = null;
-let _db: Firestore | null = null;
-let _storage: FirebaseStorage | null = null;
-
-export const auth: Auth = new Proxy({} as Auth, {
-  get(_, prop) {
-    if (!_auth) _auth = getAuth(requireApp());
-    return (_auth as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
-
-export const db: Firestore = new Proxy({} as Firestore, {
-  get(_, prop) {
-    if (!_db) _db = getFirestore(requireApp());
-    return (_db as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
-
-export const storage: FirebaseStorage = new Proxy({} as FirebaseStorage, {
-  get(_, prop) {
-    if (!_storage) _storage = getStorage(requireApp());
-    return (_storage as unknown as Record<string | symbol, unknown>)[prop];
-  },
-});
+// Los `as any` son safe: en runtime browser el app SIEMPRE existe
+// (env vars inlined en build). Los null-fallbacks son solo para que
+// el módulo pueda evaluarse durante prerender sin explotar. Cualquier
+// user code que llegue a llamar collection(db,...) etc. ya está en el
+// cliente donde el app está listo.
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export const auth: Auth = (app ? getAuth(app) : null) as any;
+export const db: Firestore = (app ? getFirestore(app) : null) as any;
+export const storage: FirebaseStorage = (app ? getStorage(app) : null) as any;
+/* eslint-enable @typescript-eslint/no-explicit-any */
