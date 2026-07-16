@@ -83,7 +83,9 @@ export default function AdminLayout({
 
   const navItems = [
     { href: '/admin', label: 'Dashboard' },
-    // Se irán agregando: products / services / bookings / messages
+    { href: '/admin/products', label: 'Products' },
+    { href: '/admin/categories', label: 'Categories' },
+    // Se irán agregando: bookings / messages
   ];
 
   return (
