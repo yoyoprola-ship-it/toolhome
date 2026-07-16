@@ -50,3 +50,23 @@ env:
     availability:
       - BUILD
       - RUNTIME
+
+  # ─── Resend (email) — compartidos con Lafayette + Rudewear ─
+  # Se usan para 2FA del admin: después del SMS verify (Firebase
+  # Phone Auth), se manda un código 6-dígitos al email del admin.
+  # Endpoint: app/api/admin/2fa-send/route.ts
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+    availability:
+      - RUNTIME
+
+  - variable: EMAIL_FROM
+    secret: EMAIL_FROM
+    availability:
+      - RUNTIME
+
+  # ─── Internal secret — hash del 6-digit email code ────────
+  - variable: INTERNAL_API_SECRET
+    secret: INTERNAL_API_SECRET
+    availability:
+      - RUNTIME
