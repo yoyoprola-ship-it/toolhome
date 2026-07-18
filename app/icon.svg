@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Toolhome favicon: fondo navy + "T" blanca en Arial Black.
+       Business-serious. Alta contrast para 16x16 en tab. -->
+  <rect width="64" height="64" rx="12" fill="#1e3a8a"/>
+  <text
+    x="32"
+    y="49"
+    font-family="Arial Black, 'Arial Black', Impact, system-ui, sans-serif"
+    font-size="52"
+    font-weight="900"
+    fill="#ffffff"
+    text-anchor="middle"
+    letter-spacing="-1">T</text>
+</svg>
